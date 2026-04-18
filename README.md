@@ -1,3 +1,9 @@
+# Demo Link
+https://pfjng2-2y.myshopify.com/products/fabric-curtain
+
+# Preview Password
+meyeod
+
 # Shopify Horizon PDP Dynamic Pricing Setup
 
 This repository contains a custom Product Detail Page (PDP) implementation for Shopify Horizon theme with dynamic pricing logic based on:
