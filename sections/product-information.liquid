@@ -1,82 +1,300 @@
 {% render 'expose-pricing-data' %}
 
-<form id="ProductForm" class="product-form" method="post" action="/cart/add">
-  <!-- Fabric & Colour Modal Trigger -->
-  <button type="button" id="open-fabric-colour-modal" class="product-form__modal-trigger">Choose Fabric & Colour</button>
+<section class="pdp-custom">
+  <div class="pdp-custom__media">
+    {% assign main_media = product.selected_or_first_available_variant.featured_media | default: product.featured_media %}
+    {% if main_media != blank %}
+      {{
+        main_media
+        | image_url: width: 1200
+        | image_tag:
+          class: 'pdp-custom__hero-image',
+          loading: 'lazy',
+          alt: main_media.alt | default: product.title
+      }}
+    {% endif %}
 
-  <!-- Modal for Fabric & Colour -->
-  <div id="fabric-colour-modal" class="product-form__modal" style="display:none;">
-    <div class="product-form__modal-content">
-      <h2>Choose Fabric</h2>
-      <div class="product-form__swatches" id="fabric-swatches">
-        {% for value in product.options_by_name['Fabric'].values %}
-          <div class="swatch" data-value="{{ value }}">{{ value }}</div>
+    {% if product.media.size > 1 %}
+      <div class="pdp-custom__thumbs">
+        {% for media in product.media limit: 4 %}
+          {{
+            media
+            | image_url: width: 160
+            | image_tag:
+              class: 'pdp-custom__thumb',
+              loading: 'lazy',
+              alt: media.alt | default: product.title
+          }}
         {% endfor %}
       </div>
-      <h2>Choose Colour</h2>
-      <div class="product-form__swatches" id="colour-swatches">
-        {% for value in product.options_by_name['Colour'].values %}
-          <div class="swatch" data-value="{{ value }}">{{ value }}</div>
-        {% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="pdp-custom__info">
+    <form id="ProductForm" class="product-form" method="post" action="{{ routes.cart_add_url }}">
+      <button type="button" id="open-fabric-colour-modal" class="product-form__modal-trigger">Choose Fabric & Colour</button>
+
+      <div id="fabric-colour-modal" class="product-form__modal" style="display:none;">
+        <div class="product-form__modal-content">
+          <h2>Choose Fabric</h2>
+          <div class="product-form__swatches" id="fabric-swatches"></div>
+          <h2>Choose Colour</h2>
+          <div class="product-form__swatches" id="colour-swatches"></div>
+          <button type="button" id="close-fabric-colour-modal">Confirm choices</button>
+        </div>
       </div>
-      <button type="button" id="close-fabric-colour-modal">Confirm choices</button>
-    </div>
+
+      <div class="pdp-field-row">
+        <label for="WidthSelector" class="pdp-field-row__label">Width:</label>
+        <div class="pdp-field-row__control">
+          <select id="WidthSelector" name="width" class="pdp-select">
+            {% assign widths_string = product.metafields.custom.widths.value | default: product.metafields.custom.widths %}
+            {% assign widths = widths_string | replace: '[', '' | replace: ']', '' | replace: '"', '' | split: ',' %}
+            {% for width in widths %}
+              <option value="{{ width | strip }}">{{ width | strip }}</option>
+            {% endfor %}
+          </select>
+          <span class="pdp-select__chevron" aria-hidden="true"></span>
+          <span class="pdp-select__info" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="pdp-field-row">
+        <label for="DropSelector" class="pdp-field-row__label">Drop:</label>
+        <div class="pdp-field-row__control">
+          <select id="DropSelector" name="drop" class="pdp-select"></select>
+          <span class="pdp-select__chevron" aria-hidden="true"></span>
+          <span class="pdp-select__info" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="product-form__quantity">
+        <button type="button" class="quantity-decrement">-</button>
+        <input type="number" name="quantity" value="1" min="1" class="quantity-input" />
+        <button type="button" class="quantity-increment">+</button>
+      </div>
+
+      <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+      <input type="hidden" name="properties[_calculated_price]" id="CalculatedPriceInput" value="">
+      <input type="hidden" name="properties[_selected_width]" id="SelectedWidthInput" value="">
+      <input type="hidden" name="properties[_selected_drop]" id="SelectedDropInput" value="">
+      <input type="hidden" name="properties[_calculated_panels]" id="CalculatedPanelsInput" value="">
+      <button type="submit" class="add-to-cart-button">Add to cart</button>
+      <button type="button" class="buy-now-button">Buy it now</button>
+    </form>
   </div>
+</section>
 
-  <!-- Width Selector (from metafield) -->
-  <label for="WidthSelector">Width</label>
-  <select id="WidthSelector" name="width">
-    {% assign widths = product.metafields.custom.widths | split: ',' %}
-    {% for width in widths %}
-      <option value="{{ width | strip }}">{{ width | strip }}</option>
-    {% endfor %}
-  </select>
-
-  <!-- Drop Selector (from variants) -->
-  <label for="DropSelector">Drop</label>
-  <select id="DropSelector" name="drop">
-    {% for value in product.options_by_name['Drop'].values %}
-      <option value="{{ value }}">{{ value }}</option>
-    {% endfor %}
-  </select>
-
-  <!-- Panels is hidden, handled in JS only -->
-
-  <!-- Quantity Selector -->
-  <div class="product-form__quantity">
-    <button type="button" class="quantity-decrement">-</button>
-    <input type="number" name="quantity" value="1" min="1" class="quantity-input" />
-    <button type="button" class="quantity-increment">+</button>
-  </div>
-
-  <!-- Add to Cart Button -->
-  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-  <button type="submit" class="add-to-cart-button">Add to cart</button>
-  <button type="button" class="buy-now-button">Buy it now</button>
-</form>
+<script src="{{ 'product-dynamic-ui.js' | asset_url }}" defer></script>
 
 <script>
-// Modal open/close logic
 (function() {
   var openBtn = document.getElementById('open-fabric-colour-modal');
   var closeBtn = document.getElementById('close-fabric-colour-modal');
   var modal = document.getElementById('fabric-colour-modal');
   if (openBtn && closeBtn && modal) {
-    openBtn.addEventListener('click', function() { modal.style.display = 'block'; });
+    openBtn.addEventListener('click', function() { modal.style.display = 'flex'; });
     closeBtn.addEventListener('click', function() { modal.style.display = 'none'; });
   }
 })();
 </script>
 
 <style>
-.product-form { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
-.product-form__modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.product-form__modal-content { background: #fff; padding: 2rem; border-radius: 8px; min-width: 300px; }
-.product-form__swatches { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.swatch { width: 48px; height: 48px; background: #eee; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; border: 2px solid transparent; }
-.swatch.selected { border-color: #000; }
-.product-form__quantity { display: flex; align-items: center; gap: 0.5rem; }
-.quantity-input { width: 48px; text-align: center; }
-.add-to-cart-button, .buy-now-button { width: 100%; padding: 1rem; font-size: 1rem; border: none; border-radius: 4px; background: #000; color: #fff; cursor: pointer; margin-bottom: 0.5rem; }
-.buy-now-button { background: #222; }
+.pdp-custom {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 420px);
+  gap: 3rem;
+  align-items: start;
+}
+
+.pdp-custom__hero-image {
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  display: block;
+}
+
+.pdp-custom__thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.pdp-custom__thumb {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 2px;
+  display: block;
+}
+
+.product-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.product-form__modal-trigger {
+  appearance: none;
+  border: 1px solid #d8d8d8;
+  background: #f7f7f7;
+  color: #222;
+  text-align: left;
+  padding: 0.8rem 1rem;
+  font-size: 13px;
+}
+
+.pdp-field-row {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 38px;
+}
+
+.pdp-field-row__label {
+  font-size: 13px;
+  color: #4b4b4b;
+}
+
+.pdp-field-row__control {
+  position: relative;
+}
+
+.pdp-select {
+  width: 100%;
+  min-height: 38px;
+  appearance: none;
+  border: 1px solid #dedede;
+  background: #f4f4f4;
+  color: #313131;
+  padding: 0.45rem 3.5rem 0.45rem 0.75rem;
+  font-size: 13px;
+}
+
+.pdp-select__chevron {
+  position: absolute;
+  right: 2.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #555;
+  font-size: 14px;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.pdp-select__chevron::before {
+  content: '\2304';
+}
+
+.pdp-select__info {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid #2f2f2f;
+  color: #2f2f2f;
+  font-size: 12px;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pdp-select__info::before {
+  content: '+';
+}
+
+.pdp-field-row__control.is-open .pdp-select__chevron {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.pdp-field-row__control.is-open .pdp-select__info::before {
+  content: '-';
+}
+
+.product-form__modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.product-form__modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  min-width: 300px;
+  max-width: min(760px, 92vw);
+}
+
+.product-form__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.swatch {
+  min-width: 52px;
+  min-height: 42px;
+  background: #eee;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  padding: 0 0.5rem;
+  font-size: 12px;
+}
+
+.swatch.selected {
+  border-color: #000;
+}
+
+.product-form__quantity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-input {
+  width: 52px;
+  text-align: center;
+}
+
+.add-to-cart-button,
+.buy-now-button {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-size: 14px;
+  border: none;
+  border-radius: 0;
+  background: #232323;
+  color: #fff;
+  cursor: pointer;
+}
+
+.buy-now-button {
+  background: #0f0f0f;
+}
+
+@media screen and (max-width: 989px) {
+  .pdp-custom {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+
+  .pdp-custom__info {
+    max-width: 540px;
+  }
+}
 </style>

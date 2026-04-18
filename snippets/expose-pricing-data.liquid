@@ -1,7 +1,43 @@
 <script>
-  window.pricingData = {% if product.metafields.custom.pricing %}
+  window.pricingData = {% if product.metafields.custom.pricing and product.metafields.custom.pricing.value != blank %}
+    {{ product.metafields.custom.pricing.value | json }}
+  {% elsif product.metafields.custom.pricing %}
     {{ product.metafields.custom.pricing | json }}
   {% else %}
     null
+  {% endif %};
+
+  window.productVariants = {{ product.variants | json }};
+
+  window.widthOptions = {% if product.metafields.custom.widths and product.metafields.custom.widths.value != blank %}
+    {{ product.metafields.custom.widths.value | json }}
+  {% elsif product.metafields.custom.widths %}
+    {{ product.metafields.custom.widths | json }}
+  {% else %}
+    []
+  {% endif %};
+
+  window.fabricOptions = {% if product.metafields.custom.fabrics and product.metafields.custom.fabrics.value != blank %}
+    {{ product.metafields.custom.fabrics.value | json }}
+  {% elsif product.metafields.custom.fabrics %}
+    {{ product.metafields.custom.fabrics | json }}
+  {% elsif product.metafields.custom.fabric and product.metafields.custom.fabric.value != blank %}
+    {{ product.metafields.custom.fabric.value | json }}
+  {% elsif product.metafields.custom.fabric %}
+    {{ product.metafields.custom.fabric | json }}
+  {% else %}
+    []
+  {% endif %};
+
+  window.colourOptions = {% if product.metafields.custom.colours and product.metafields.custom.colours.value != blank %}
+    {{ product.metafields.custom.colours.value | json }}
+  {% elsif product.metafields.custom.colours %}
+    {{ product.metafields.custom.colours | json }}
+  {% elsif product.metafields.custom.colors and product.metafields.custom.colors.value != blank %}
+    {{ product.metafields.custom.colors.value | json }}
+  {% elsif product.metafields.custom.colors %}
+    {{ product.metafields.custom.colors | json }}
+  {% else %}
+    []
   {% endif %};
 </script>

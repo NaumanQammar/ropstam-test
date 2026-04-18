@@ -6,6 +6,31 @@
 {%- enddoc -%}
 
 <div class="cart-totals">
+  {%- liquid
+    assign custom_cart_total_cents = 0
+    assign has_any_custom_price = false
+
+    for item in cart.items
+      assign custom_price_raw = item.properties['_calculated_price']
+      assign custom_unit_price_number = custom_price_raw | replace: ',', '.' | plus: 0
+
+      if custom_unit_price_number > 0
+        assign has_any_custom_price = true
+        assign custom_unit_price_cents = custom_unit_price_number | times: 100 | round
+        assign custom_line_price_cents = custom_unit_price_cents | times: item.quantity
+        assign custom_cart_total_cents = custom_cart_total_cents | plus: custom_line_price_cents
+      else
+        assign custom_cart_total_cents = custom_cart_total_cents | plus: item.final_line_price
+      endif
+    endfor
+
+    if settings.currency_code_enabled_cart_total
+      assign custom_cart_total_money = custom_cart_total_cents | money_with_currency
+    else
+      assign custom_cart_total_money = custom_cart_total_cents | money
+    endif
+  -%}
+
   {% # We need to keep this node in place to allow morphing to work properly # %}
   <div class="cart-totals__original-container cart-primary-typography">
     {%- if cart.cart_level_discount_applications.size > 0 -%}
@@ -15,7 +40,11 @@
           class="cart-totals__original-value cart-secondary-typography"
           data-testid="cart-subtotal-value"
         >
-          {{- cart.items_subtotal_price | money -}}
+          {%- if has_any_custom_price -%}
+            {{- custom_cart_total_money -}}
+          {%- else -%}
+            {{- cart.items_subtotal_price | money -}}
+          {%- endif -%}
         </span>
       </span>
       <ul
@@ -220,7 +249,9 @@
   {% endif %}
 
   {%- liquid
-    if settings.currency_code_enabled_cart_total
+    if has_any_custom_price
+      assign total_price = custom_cart_total_money
+    elsif settings.currency_code_enabled_cart_total
       assign total_price = cart.total_price | money_with_currency
     else
       assign total_price = cart.total_price | money

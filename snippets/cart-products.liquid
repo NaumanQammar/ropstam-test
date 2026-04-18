@@ -123,6 +123,16 @@
 
           <tbody role="rowgroup">
             {% for item in cart.items %}
+              {%- liquid
+                assign custom_price_raw = item.properties['_calculated_price']
+                assign custom_unit_price_number = custom_price_raw | replace: ',', '.' | plus: 0
+                assign has_custom_price = false
+                if custom_unit_price_number > 0
+                  assign has_custom_price = true
+                  assign custom_unit_price_cents = custom_unit_price_number | times: 100 | round
+                  assign custom_line_price_cents = custom_unit_price_cents | times: item.quantity
+                endif
+              -%}
               <tr
                 role="row"
                 class="cart-items__table-row{% if item.parent_relationship.parent != null %} cart-items__nested-line{% endif %}{% unless item.unit_price_measurement %} cart-items__table-row--full-width-variants{% endunless %}"
@@ -266,7 +276,10 @@
 
                   <div class="cart-items__unit-price-wrapper">
                     <div>
-                      {% if item.original_price != item.final_price %}
+                      {% if has_custom_price %}
+                        <span class="visually-hidden">{{ 'content.price' | t }}</span>
+                        <span>{{ custom_unit_price_cents | money }}</span>
+                      {% elsif item.original_price != item.final_price %}
                         <span class="visually-hidden">{{ 'content.price_sale' | t }}</span>
                         <span>{{ item.final_price | money }}</span>
                         <span class="visually-hidden">{{ 'content.price_regular' | t }}</span>
@@ -354,7 +367,13 @@
                   </div>
                 </td>
                 {%- liquid
-                  if settings.currency_code_enabled_cart_items
+                  if has_custom_price
+                    if settings.currency_code_enabled_cart_items
+                      assign price = custom_line_price_cents | money_with_currency
+                    else
+                      assign price = custom_line_price_cents | money
+                    endif
+                  elsif settings.currency_code_enabled_cart_items
                     assign price = item.final_line_price | money_with_currency
                     assign unit_price = item.unit_price | money_with_currency
                   else
