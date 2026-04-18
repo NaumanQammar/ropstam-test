@@ -31,6 +31,7 @@
 
   const fabricSwatches = document.getElementById('fabric-swatches');
   const colourSwatches = document.getElementById('colour-swatches');
+  const selectedFabricColourLabel = document.getElementById('SelectedFabricColourLabel');
   const form = document.getElementById('ProductForm');
   const quantityInput = /** @type {HTMLInputElement | null} */ (document.querySelector('#ProductForm .quantity-input'));
   const quantityDecrementBtn = /** @type {HTMLButtonElement | null} */ (document.querySelector('#ProductForm .quantity-decrement'));
@@ -66,7 +67,19 @@
     return '';
   }
 
-  function renderSwatches(container, options, inputName) {
+  var selectedFabricValue = '';
+  var selectedColourValue = '';
+
+  function updateFabricColourLabel() {
+    if (!selectedFabricColourLabel) return;
+    if (selectedFabricValue && selectedColourValue) {
+      selectedFabricColourLabel.textContent = selectedFabricValue + ' / ' + selectedColourValue;
+      return;
+    }
+    selectedFabricColourLabel.textContent = selectedFabricValue || selectedColourValue || 'Select';
+  }
+
+  function renderSwatches(container, options, inputName, onValueChange) {
     if (!container) return;
     const normalized = normalizeSwatchOptions(options);
     container.innerHTML = '';
@@ -97,6 +110,9 @@
         if (hidden) {
           hidden.value = label;
         }
+        if (onValueChange) {
+          onValueChange(label);
+        }
       });
 
       if (index === 0) {
@@ -116,6 +132,9 @@
       }
       if (hidden && !hidden.value) {
         hidden.value = optionLabel(normalized[0]);
+      }
+      if (onValueChange && normalized[0]) {
+        onValueChange(optionLabel(normalized[0]));
       }
     }
   }
@@ -325,8 +344,14 @@
     });
   }
 
-  renderSwatches(fabricSwatches, window.fabricOptions, 'properties[Fabric]');
-  renderSwatches(colourSwatches, window.colourOptions, 'properties[Colour]');
+  renderSwatches(fabricSwatches, window.fabricOptions, 'properties[Fabric]', function(value) {
+    selectedFabricValue = value;
+    updateFabricColourLabel();
+  });
+  renderSwatches(colourSwatches, window.colourOptions, 'properties[Colour]', function(value) {
+    selectedColourValue = value;
+    updateFabricColourLabel();
+  });
 
   updatePricingAndVariant();
 })();
