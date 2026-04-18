@@ -1,0 +1,7 @@
+<script>
+  window.pricingData = {% if product.metafields.custom.pricing %}
+    {{ product.metafields.custom.pricing | json }}
+  {% else %}
+    null
+  {% endif %};
+</script>
